@@ -3,7 +3,7 @@ NAME := $(shell echo $${PWD\#\#*/})
 TARGET := ./docker/$(NAME)
 all: clean build image
 $(TARGET): 
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -ldflags="-X main.VERSION=$(VERSION) -X main.BUILD=$(shell git describe --always --long --dirty)" -o $(TARGET) github.com/osiloke/fcm/cmd/fcm
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -ldflags="-X main.VERSION=$(VERSION) -X main.BUILD=$(shell git describe --always --long --dirty)" -o $(TARGET) github.com/osiloke/mail/cmd/mail
 build: $(TARGET)
 		@true
 image:
@@ -15,8 +15,6 @@ push:
 ktag: 
 	@docker tag $(NAME):$(VERSION) gcr.io/dostow-api/$(NAME):$(VERSION)  
 kpush:
-	@docker push gcr.io/dostow-api/$(NAME):$(VERSION) 
-bindata:
-	@go-bindata -o service/schemas.go -pkg service core_schemas schemas
+	@docker push gcr.io/dostow-api/$(NAME):$(VERSION)
 clean:
 	@rm -f $(TARGET)

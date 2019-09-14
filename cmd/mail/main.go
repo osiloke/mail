@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jaffee/commandeer"
-	"github.com/osiloke/fcm/worker"
+	"github.com/osiloke/mail/worker"
 )
 
 var BUILD string = ""

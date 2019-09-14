@@ -2,7 +2,7 @@
 init_cmds = [                      # Commands run in start
   ["go", "install"],
   ["go", "build"],
-  ["./push"]
+  ["./mail"]
 ]
 watch_all = true                   # Watch all sub-directories
 watch_dirs = []                    # Directories to watch
@@ -16,7 +16,7 @@ graceful_kill = false              # Wait for exit and before directly kill
 cmds = [                           # Commands to run
   ["go", "install"],
   ["go", "build"],
-  ["./push"]
+  ["./mail"]
 ]
 
 [sync]
