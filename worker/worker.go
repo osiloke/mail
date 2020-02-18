@@ -3,20 +3,25 @@ package worker
 import (
 	// "context"
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
-
+	"github.com/grokify/html-strip-tags-go"
 	mailgun "github.com/mailgun/mailgun-go/v3"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/osiloke/mail/queues/machinery"
+	"github.com/tidwall/gjson"
 	"github.com/valyala/fasttemplate"
 )
 
 //Config required
 type Config struct {
-	Domain string `json:"domain"`
-	Key    string `json:"key"`
+	Mailgun struct{ 
+		Domain string `json:"domain"`
+		Key    string `json:"key"`
+	} `json:"mailgun"`
 }
 
 //Params required
@@ -46,7 +51,7 @@ func do(addonConfig, addonParams, data, traceID string) error {
 		return err
 	}
 	// Create an instance of the Mailgun Client
-	mg := mailgun.NewMailgun(config.Domain, config.Key)
+	mg := mailgun.NewMailgun(config.Mailgun.Domain, config.Mailgun.Key)
 	if len(params.SubjectTemplate) == 0 {
 		return errors.New("missing subject template")
 	}
@@ -57,15 +62,27 @@ func do(addonConfig, addonParams, data, traceID string) error {
 		return errors.New("missing body template")
 	}
 	sender := params.Sender
-	subjectTpl := fasttemplate.New(params.SubjectTemplate, "{{", "}}")
+	subjectTpl := fasttemplate.New(params.SubjectTemplate, "[[", "]]")
 	subject := subjectTpl.ExecuteString(d)
-	bodyTpl := fasttemplate.New(params.BodyTemplate, "{{", "}}")
+	bodyData, _ := b64.StdEncoding.DecodeString(params.BodyTemplate)
+	bd := string(bodyData)
+	bodyTpl := fasttemplate.New(bd, "[[", "]]")
 	body := bodyTpl.ExecuteString(d)
-	recipientTpl := fasttemplate.New(params.RecipientTemplate, "{{", "}}")
-	recipient := recipientTpl.ExecuteString(d)
+	recipient := gjson.Get(data, params.RecipientTemplate)
 
+	p := bluemonday.UGCPolicy()
+	p.AllowStandardURLs()
+
+	// We only allow <p> and <a href="">
+	p.AllowAttrs("href").OnElements("a")
+
+	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
+	html := body// p.Sanitize(body)
+	text := strip.StripTags(html)
 	// The message object allows you to add attachments and Bcc recipients
-	message := mg.NewMessage(sender, subject, body, recipient)
+	message := mg.NewMessage(sender, subject, text, recipient.String())
+	message.SetTracking(true)
+	message.SetHtml(html)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
