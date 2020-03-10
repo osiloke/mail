@@ -5,6 +5,10 @@ var addonconfig = `{
 	"title": "Mail Addon",
 	"description": "Send emails based on changes to a store",
 	"properties": {
+		"mailer": {
+			"type": "string",
+			"enum": ["mailjet", "mailgun", "postmark", "smtp"]
+		},
 		"smtp": {
 			"type": "object",
 			"properties": {
@@ -42,6 +46,29 @@ var addonconfig = `{
 				}
 			},
 			"required": ["domain", "key"],
+			"additionalProperties": false
+		},
+		"postmark": {
+			"type": "object",
+			"properties": {
+				"serverToken": {
+					"type": "string"
+				}
+			},
+			"required": ["serverToken"],
+			"additionalProperties": false
+		},
+		"mailjet": {
+			"type": "object",
+			"properties": {
+				"apiKey": {
+					"type": "string"
+				},
+				"secretKey": {
+					"type": "string"
+				}
+			},
+			"required": ["apiKey"],
 			"additionalProperties": false
 		}
 	},

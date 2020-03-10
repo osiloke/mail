@@ -2,15 +2,21 @@ package worker
 
 import (
 	// "context"
+	"bytes"
 	"context"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"time"
-	"github.com/grokify/html-strip-tags-go"
-	mailgun "github.com/mailgun/mailgun-go/v3"
-	"github.com/microcosm-cc/bluemonday"
+
+	"github.com/Masterminds/sprig"
+	"github.com/apex/log"
+	strip "github.com/grokify/html-strip-tags-go"
+
+	// "github.com/microcosm-cc/bluemonday"
+	"github.com/osiloke/mail/mailers"
 	"github.com/osiloke/mail/queues/machinery"
 	"github.com/tidwall/gjson"
 	"github.com/valyala/fasttemplate"
@@ -18,10 +24,18 @@ import (
 
 //Config required
 type Config struct {
-	Mailgun struct{ 
+	Mailer  string `json:"mailer"`
+	Mailgun struct {
 		Domain string `json:"domain"`
 		Key    string `json:"key"`
 	} `json:"mailgun"`
+	Mailjet struct {
+		ApiKey    string `json:"apiKey"`
+		SecretKey string `json:"secretKey"`
+	} `json:"mailjet"`
+	Postmark struct {
+		ServerToken string `json:"serverToken"`
+	} `json:"postmark"`
 }
 
 //Params required
@@ -50,8 +64,19 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	if err != nil {
 		return err
 	}
+	var mc mailers.Mailer
+	log.Debugf("%s Mailer - New Email", config.Mailer)
+	switch config.Mailer {
+	case "mailjet":
+		mc = mailers.NewMailjetMailer(config.Mailjet.ApiKey, config.Mailjet.SecretKey)
+	case "postmark":
+		mc = mailers.NewMailjetMailer(config.Postmark.ServerToken, "")
+	case "mailgun":
+		mc = mailers.NewMailgunMailer(config.Mailgun.Domain, config.Mailgun.Key)
+	default:
+		return errors.New("no mailer specified")
+	}
 	// Create an instance of the Mailgun Client
-	mg := mailgun.NewMailgun(config.Mailgun.Domain, config.Mailgun.Key)
 	if len(params.SubjectTemplate) == 0 {
 		return errors.New("missing subject template")
 	}
@@ -61,40 +86,42 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	if len(params.BodyTemplate) == 0 {
 		return errors.New("missing body template")
 	}
+	// p := bluemonday.UGCPolicy()
+	// p.AllowStandardURLs()
+
+	// // We only allow <p> and <a href="">
+	// p.AllowAttrs("href").OnElements("a")
+
 	sender := params.Sender
 	subjectTpl := fasttemplate.New(params.SubjectTemplate, "[[", "]]")
 	subject := subjectTpl.ExecuteString(d)
 	bodyData, _ := b64.StdEncoding.DecodeString(params.BodyTemplate)
 	bd := string(bodyData)
-	bodyTpl := fasttemplate.New(bd, "[[", "]]")
-	body := bodyTpl.ExecuteString(d)
+	bodyTpl, err := template.New("").Funcs(sprig.FuncMap()).Delims("[[", "]]").Parse(bd)
+	if err != nil {
+		return err
+	}
+	var tpl bytes.Buffer
+	if err := bodyTpl.Execute(&tpl, d); err != nil {
+		return err
+	}
+
+	body := tpl.String()
 	recipient := gjson.Get(data, params.RecipientTemplate)
 
-	p := bluemonday.UGCPolicy()
-	p.AllowStandardURLs()
-
-	// We only allow <p> and <a href="">
-	p.AllowAttrs("href").OnElements("a")
-
 	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
-	html := body// p.Sanitize(body)
+	html := body // p.Sanitize(body)
 	text := strip.StripTags(html)
 	// The message object allows you to add attachments and Bcc recipients
-	message := mg.NewMessage(sender, subject, text, recipient.String())
-	message.SetTracking(true)
-	message.SetHtml(html)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	// Send the message	with a 10 second timeout
-	resp, id, err := mg.Send(ctx, message)
-
+	err = mc.Send(ctx, sender, subject, text, recipient.String(), html)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - sender: %s, subject: %s, recipient: %s", err, sender, subject, recipient.String())
 	}
-
-	fmt.Printf("ID: %s Resp: %s\n", id, resp)
 	return nil
 }
 
@@ -107,7 +134,7 @@ type Worker struct {
 // Run run the worker
 func (w *Worker) Run() error {
 	return machinery.Worker(w.ID, map[string]interface{}{
-		"mail": do,
+		"email": do,
 	})
 }
 
