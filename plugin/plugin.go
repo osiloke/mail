@@ -53,6 +53,9 @@ var addonconfig = `{
 			"properties": {
 				"serverToken": {
 					"type": "string"
+				},
+				"apiToken": {
+					"type": "string"
 				}
 			},
 			"required": ["serverToken"],

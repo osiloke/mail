@@ -34,6 +34,7 @@ type Config struct {
 		SecretKey string `json:"secretKey"`
 	} `json:"mailjet"`
 	Postmark struct {
+		APIToken    string `json:"apiToken"`
 		ServerToken string `json:"serverToken"`
 	} `json:"postmark"`
 }
@@ -70,7 +71,7 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	case "mailjet":
 		mc = mailers.NewMailjetMailer(config.Mailjet.ApiKey, config.Mailjet.SecretKey)
 	case "postmark":
-		mc = mailers.NewMailjetMailer(config.Postmark.ServerToken, "")
+		mc = mailers.NewPostmarkMailer(config.Postmark.ServerToken, config.Postmark.APIToken)
 	case "mailgun":
 		mc = mailers.NewMailgunMailer(config.Mailgun.Domain, config.Mailgun.Key)
 	default:
