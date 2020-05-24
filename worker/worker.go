@@ -76,7 +76,7 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	log.Debugf("%s Mailer - New Email", config.Mailer)
 	switch config.Mailer {
 	case "smtp":
-		port := 587
+		port := 465
 		if config.SMTP.Port > 0 {
 			port = config.SMTP.Port
 		}
