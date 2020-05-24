@@ -37,6 +37,13 @@ type Config struct {
 		APIToken    string `json:"apiToken"`
 		ServerToken string `json:"serverToken"`
 	} `json:"postmark"`
+	SMTP struct {
+		Server   string `json:"server"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Port     int    `json:"port"`
+		SSL      bool   `json:"ssl"`
+	} `json:"smtp"`
 }
 
 //Params required
@@ -68,6 +75,12 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	var mc mailers.Mailer
 	log.Debugf("%s Mailer - New Email", config.Mailer)
 	switch config.Mailer {
+	case "smtp":
+		port := 587
+		if config.SMTP.Port > 0 {
+			port = config.SMTP.Port
+		}
+		mc = mailers.NewSMTP(config.SMTP.Server, config.SMTP.Username, config.SMTP.Password, port)
 	case "mailjet":
 		mc = mailers.NewMailjetMailer(config.Mailjet.ApiKey, config.Mailjet.SecretKey)
 	case "postmark":
@@ -108,7 +121,11 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	}
 
 	body := tpl.String()
-	recipient := gjson.Get(data, params.RecipientTemplate)
+	recipient := params.RecipientTemplate
+	r := gjson.Get(data, params.RecipientTemplate)
+	if r.Exists() {
+		recipient = r.String()
+	}
 
 	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
 	html := body // p.Sanitize(body)
@@ -119,9 +136,9 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	defer cancel()
 
 	// Send the message	with a 10 second timeout
-	err = mc.Send(ctx, sender, subject, text, recipient.String(), html)
+	err = mc.Send(ctx, sender, subject, text, recipient, html)
 	if err != nil {
-		return fmt.Errorf("%s - sender: %s, subject: %s, recipient: %s", err, sender, subject, recipient.String())
+		return fmt.Errorf("%s - sender: %s, subject: %s, recipient: %s", err, sender, subject, recipient)
 	}
 	return nil
 }

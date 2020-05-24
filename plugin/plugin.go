@@ -24,6 +24,10 @@ var addonconfig = `{
 					"type": "string",
 					"description": "Password for your mail server"
 				},
+				"port": {
+					"type": "number",
+					"description": "SMTP port"
+				},
 				"ssl": {
 					"type": "boolean",
 					"description": "Use an ssl connection for connecting to your mail server"

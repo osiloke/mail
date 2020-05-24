@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/RichardKnop/machinery v1.6.9
 	github.com/apex/log v1.1.2
+	github.com/go-gomail/gomail v0.0.0-20160411212932-81ebce5c23df
 	github.com/grokify/html-strip-tags-go v0.0.0-20190424092004-025bd760b278
 	github.com/huandu/xstrings v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect

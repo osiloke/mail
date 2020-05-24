@@ -1,7 +1,7 @@
-VERSION := 1.0.0
+VERSION := 1.0.1
 NAME := $(shell echo $${PWD\#\#*/})
 TARGET := ./docker/$(NAME)
-all: clean build image
+all: clean build image scaletag scalepush
 $(TARGET): 
 	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -ldflags="-X main.VERSION=$(VERSION) -X main.BUILD=$(shell git describe --always --long --dirty)" -o $(TARGET) github.com/osiloke/mail/cmd/mail
 build: $(TARGET)
@@ -16,6 +16,10 @@ ktag:
 	@docker tag $(NAME):$(VERSION) gcr.io/dostow-api/$(NAME):$(VERSION)  
 kpush:
 	@docker push gcr.io/dostow-api/$(NAME):$(VERSION)
+scaletag: 
+	@docker tag $(NAME):$(VERSION) rg.fr-par.scw.cloud/dostow/$(NAME):$(VERSION)  
+scalepush:
+	@docker push rg.fr-par.scw.cloud/dostow/$(NAME):$(VERSION) 
 msave:
 	@docker save $(NAME):$(VERSION) -o $(NAME)_$(VERSION).tar
 mcopy: 
