@@ -19,7 +19,6 @@ import (
 	"github.com/osiloke/mail/mailers"
 	"github.com/osiloke/mail/queues/machinery"
 	"github.com/tidwall/gjson"
-	"github.com/valyala/fasttemplate"
 )
 
 //Config required
@@ -107,8 +106,14 @@ func do(addonConfig, addonParams, data, traceID string) error {
 	// p.AllowAttrs("href").OnElements("a")
 
 	sender := params.Sender
-	subjectTpl := fasttemplate.New(params.SubjectTemplate, "[[", "]]")
-	subject := subjectTpl.ExecuteString(d)
+	subject := params.SubjectTemplate
+	subjectTpl, err := template.New("").Funcs(sprig.FuncMap()).Delims("[[", "]]").Parse(params.SubjectTemplate)
+	if err == nil {
+		var tplBuffer bytes.Buffer
+		if err := subjectTpl.Execute(&tplBuffer, d); err == nil {
+			subject = tplBuffer.String()
+		}
+	}
 	bodyData, _ := b64.StdEncoding.DecodeString(params.BodyTemplate)
 	bd := string(bodyData)
 	bodyTpl, err := template.New("").Funcs(sprig.FuncMap()).Delims("[[", "]]").Parse(bd)
