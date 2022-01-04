@@ -20,13 +20,13 @@ type PostmarkMailer struct {
 }
 
 // Send send an email
-func (m *PostmarkMailer) Send(ctx context.Context, sender, subject, text, recipient, html string) error {
+func (m *PostmarkMailer) Send(ctx context.Context, p *MailParams) error {
 	email := postmark.Email{
-		From:       sender,
-		To:         recipient,
-		Subject:    subject,
-		HtmlBody:   html,
-		TextBody:   text,
+		From:       p.Sender,
+		To:         p.Recipient,
+		Subject:    p.Subject,
+		HtmlBody:   p.Html,
+		TextBody:   p.Text,
 		Tag:        m.customID,
 		TrackOpens: true,
 	}

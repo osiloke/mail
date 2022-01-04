@@ -9,59 +9,29 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"os"
 	"time"
 
 	"github.com/Masterminds/sprig"
-	"github.com/apex/log"
 	strip "github.com/grokify/html-strip-tags-go"
 
 	// "github.com/microcosm-cc/bluemonday"
+	"github.com/RichardKnop/machinery/v1/log"
+	"github.com/cavaliercoder/grab"
 	"github.com/osiloke/mail/mailers"
 	"github.com/osiloke/mail/queues/machinery"
 	"github.com/tidwall/gjson"
 )
 
-//Config required
-type Config struct {
-	Mailer  string `json:"mailer"`
-	Mailgun struct {
-		Domain string `json:"domain"`
-		Key    string `json:"key"`
-	} `json:"mailgun"`
-	Mailjet struct {
-		ApiKey    string `json:"apiKey"`
-		SecretKey string `json:"secretKey"`
-	} `json:"mailjet"`
-	Postmark struct {
-		APIToken    string `json:"apiToken"`
-		ServerToken string `json:"serverToken"`
-	} `json:"postmark"`
-	SMTP struct {
-		Server   string `json:"server"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Port     int    `json:"port"`
-		SSL      bool   `json:"ssl"`
-	} `json:"smtp"`
-}
-
-//Params required
-type Params struct {
-	BodyTemplate      string `json:"bodyTemplate"`
-	SubjectTemplate   string `json:"subjectTemplate"`
-	RecipientTemplate string `json:"recipientTemplate"`
-	Sender            string `json:"sender"`
-}
-
 func do(addonConfig, addonParams, data, traceID string) error {
-	config := Config{}
+	config := mailers.Config{}
 	// ctx := context.Background()
 	err := json.Unmarshal([]byte(addonConfig), &config)
 	if err != nil {
 		return err
 	}
 
-	params := Params{}
+	params := mailers.Params{}
 	err = json.Unmarshal([]byte(addonParams), &params)
 	if err != nil {
 		return err
@@ -72,7 +42,7 @@ func do(addonConfig, addonParams, data, traceID string) error {
 		return err
 	}
 	var mc mailers.Mailer
-	log.Debugf("%s Mailer - New Email", config.Mailer)
+	log.DEBUG.Printf("%s Mailer - New Email", config.Mailer)
 	switch config.Mailer {
 	case "smtp":
 		port := 465
@@ -132,6 +102,25 @@ func do(addonConfig, addonParams, data, traceID string) error {
 		recipient = r.String()
 	}
 
+	attachment := params.Attachment
+	attachmentTpl, err := template.New("").Funcs(sprig.FuncMap()).Delims("[[", "]]").Parse(params.Attachment)
+	if err == nil {
+		var tplBuffer bytes.Buffer
+		if err := attachmentTpl.Execute(&tplBuffer, d); err == nil {
+			attachment = tplBuffer.String()
+		}
+	}
+
+	if len(attachment) > 0 {
+		resp, err := grab.Get(".", attachment)
+		if err != nil {
+			return err
+		} else {
+			attachment = resp.Filename
+			defer os.Remove(resp.Filename)
+		}
+	}
+
 	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
 	html := body // p.Sanitize(body)
 	text := strip.StripTags(html)
@@ -139,11 +128,14 @@ func do(addonConfig, addonParams, data, traceID string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-
+	log.DEBUG.Println("sending email to :", recipient)
 	// Send the message	with a 10 second timeout
-	err = mc.Send(ctx, sender, subject, text, recipient, html)
+	err = mc.Send(ctx, &mailers.MailParams{Sender: sender, Subject: subject, Text: text,
+		Recipient: recipient, Html: html, Attachment: attachment})
 	if err != nil {
-		return fmt.Errorf("%s - sender: %s, subject: %s, recipient: %s", err, sender, subject, recipient)
+		err2 := fmt.Errorf("%s - sender: %s, subject: %s, recipient: %s", err, sender, subject, recipient)
+		log.ERROR.Println(err, err2)
+		return err2
 	}
 	return nil
 }

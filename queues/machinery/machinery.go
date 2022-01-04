@@ -1,4 +1,5 @@
 package machinery
+
 // TODO: move this to separate go mod
 import (
 	// "context"
@@ -12,8 +13,8 @@ import (
 
 	"github.com/RichardKnop/machinery/v1"
 	"github.com/RichardKnop/machinery/v1/config"
-	"github.com/RichardKnop/machinery/v1/log"
-	"github.com/RichardKnop/machinery/v1/tasks"
+	machinery_log "github.com/RichardKnop/machinery/v1/log"
+	"github.com/sirupsen/logrus"
 	// "github.com/google/uuid"
 )
 
@@ -59,6 +60,9 @@ func startServer(tasks map[string]interface{}) (*machinery.Server, error) {
 
 // Worker a machinery worker
 func Worker(consumerTag string, workerTasks map[string]interface{}) error {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	machinery_log.Set(logger)
 	// cleanup, err := tracers.SetupTracer(consumerTag)
 	// if err != nil {
 	// 	log.FATAL.Fatalln("Unable to instantiate a tracer:", err)
@@ -77,19 +81,19 @@ func Worker(consumerTag string, workerTasks map[string]interface{}) error {
 	// Here we inject some custom code for error handling,
 	// start and end of task hooks, useful for metrics for example.
 	errorhandler := func(err error) {
-		log.ERROR.Println("I am an error handler:", err)
+		machinery_log.ERROR.Println("An error occured", err)
 	}
 
-	pretaskhandler := func(signature *tasks.Signature) {
-		log.INFO.Println("I am a start of task handler for:", signature.Name)
-	}
+	// pretaskhandler := func(signature *tasks.Signature) {
+	// 	log.INFO.Println("I am a start of task handler for:", signature.Name)
+	// }
 
-	posttaskhandler := func(signature *tasks.Signature) {
-		log.INFO.Println("I am an end of task handler for:", signature.Name)
-	}
+	// posttaskhandler := func(signature *tasks.Signature) {
+	// 	log.INFO.Println("I am an end of task handler for:", signature.Name)
+	// }
 
-	worker.SetPostTaskHandler(posttaskhandler)
+	// worker.SetPostTaskHandler(posttaskhandler)
 	worker.SetErrorHandler(errorhandler)
-	worker.SetPreTaskHandler(pretaskhandler)
+	// worker.SetPreTaskHandler(pretaskhandler)
 	return worker.Launch()
 }

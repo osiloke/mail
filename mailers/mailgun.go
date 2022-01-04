@@ -19,10 +19,10 @@ type MailgunMailer struct {
 }
 
 // Send send an email
-func (m *MailgunMailer) Send(ctx context.Context, sender, subject, text, recipient, html string) error {
-	message := m.mg.NewMessage(sender, subject, text, recipient)
+func (m *MailgunMailer) Send(ctx context.Context, p *MailParams) error {
+	message := m.mg.NewMessage(p.Sender, p.Subject, p.Text, p.Recipient)
 	message.SetTracking(true)
-	message.SetHtml(html)
+	message.SetHtml(p.Html)
 	resp, id, err := m.mg.Send(ctx, message)
 	log.Debugf("Message Sent - %s - %s", id, resp)
 	return err

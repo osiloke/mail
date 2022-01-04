@@ -20,20 +20,20 @@ type MailjetMailer struct {
 }
 
 // Send send an email
-func (m *MailjetMailer) Send(ctx context.Context, sender, subject, text, recipient, html string) error {
+func (m *MailjetMailer) Send(ctx context.Context, p *MailParams) error {
 	messagesInfo := []mailjet.InfoMessagesV31{
-		mailjet.InfoMessagesV31{
+		{
 			From: &mailjet.RecipientV31{
-				Email: sender,
+				Email: p.Sender,
 			},
 			To: &mailjet.RecipientsV31{
 				mailjet.RecipientV31{
-					Email: recipient,
+					Email: p.Recipient,
 				},
 			},
-			Subject:  subject,
-			TextPart: text,
-			HTMLPart: html,
+			Subject:  p.Subject,
+			TextPart: p.Text,
+			HTMLPart: p.Html,
 			CustomID: m.customID,
 		},
 	}
