@@ -7,7 +7,7 @@ var addonconfig = `{
 	"properties": {
 		"mailer": {
 			"type": "string",
-			"enum": ["mailjet", "mailgun", "postmark", "smtp"]
+			"enum": ["sendgrid", "mailjet", "mailgun", "postmark", "smtp"]
 		},
 		"smtp": {
 			"type": "object",

@@ -56,6 +56,8 @@ func do(addonConfig, addonParams, data, traceID string) error {
 		mc = mailers.NewPostmarkMailer(config.Postmark.ServerToken, config.Postmark.APIToken)
 	case "mailgun":
 		mc = mailers.NewMailgunMailer(config.Mailgun.Domain, config.Mailgun.Key)
+	case "sendgrid":
+		mc = mailers.NewSendgridMailer(config.Sendgrid.Domain, config.Sendgrid.Key)
 	default:
 		return errors.New("no mailer specified")
 	}

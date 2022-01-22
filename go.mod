@@ -20,6 +20,8 @@ require (
 	github.com/mailgun/mailgun-go/v3 v3.6.0
 	github.com/mailjet/mailjet-apiv3-go v0.0.0-20190724151621-55e56f74078c
 	github.com/mitchellh/copystructure v1.0.0 // indirect
+	github.com/sendgrid/rest v2.6.7+incompatible // indirect
+	github.com/sendgrid/sendgrid-go v3.10.5+incompatible
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/gjson v1.3.2

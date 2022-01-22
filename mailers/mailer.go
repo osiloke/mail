@@ -24,6 +24,10 @@ type Config struct {
 		Port     int    `json:"port"`
 		SSL      bool   `json:"ssl"`
 	} `json:"smtp"`
+	Sendgrid struct {
+		Domain string `json:"domain"`
+		Key    string `json:"key"`
+	} `json:"sendgrid"`
 }
 
 //Params required
